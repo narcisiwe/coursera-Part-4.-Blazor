@@ -1,0 +1,72 @@
+@page "/attendance"
+@rendermode InteractiveServer
+@inject AttendanceService AttendanceService
+
+<PageTitle>Attendance Tracker - EventEase</PageTitle>
+
+<div class="page-intro">
+    <div>
+        <span class="page-kicker">Advanced Feature</span>
+        <h1 class="page-title">Attendance Tracker</h1>
+        <p class="page-subtitle">Review everyone registered during the current session, toggle check-in status, and remove attendees if needed.</p>
+    </div>
+    <div class="page-chip">@AttendanceService.Attendees.Count attendees</div>
+</div>
+
+<section class="attendance-panel">
+    @if (AttendanceService.Attendees.Count == 0)
+    {
+        <div class="empty-state">
+            <h3>No attendees yet</h3>
+            <p class="muted">Submit the registration form to populate this table.</p>
+        </div>
+    }
+    else
+    {
+        <div class="attendance-table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Event</th>
+                        <th>Status</th>
+                        <th>Check In</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var attendee in AttendanceService.Attendees)
+                    {
+                        <tr>
+                            <td><strong>@attendee.FullName</strong></td>
+                            <td>@attendee.Email</td>
+                            <td>@attendee.EventTitle</td>
+                            <td>
+                                @if (attendee.CheckedIn)
+                                {
+                                    <span class="checked-pill">Checked in</span>
+                                }
+                                else
+                                {
+                                    <span class="pending-pill">Pending</span>
+                                }
+                            </td>
+                            <td>
+                                <input class="form-check-input" type="checkbox" checked="@attendee.CheckedIn" @onchange="() => ToggleCheckIn(attendee.Id)" />
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => Remove(attendee.Id)">Remove</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private void ToggleCheckIn(Guid id) => AttendanceService.ToggleCheckIn(id);
+    private void Remove(Guid id) => AttendanceService.Remove(id);
+}

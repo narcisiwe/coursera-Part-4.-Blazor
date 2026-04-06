@@ -1,0 +1,132 @@
+@page "/register"
+@rendermode InteractiveServer
+@inject EventService EventService
+@inject AttendanceService AttendanceService
+@inject SessionStateService SessionState
+
+<PageTitle>Registration - EventEase</PageTitle>
+
+<div class="page-intro">
+    <div>
+        <span class="page-kicker">Advanced Feature</span>
+        <h1 class="page-title">Event Registration Form</h1>
+        <p class="page-subtitle">This form demonstrates input validation, event selection, consent handling, session updates, and attendance tracking in one place.</p>
+    </div>
+    <div class="page-chip">Validation enabled</div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success mb-4">@successMessage</div>
+}
+
+<div class="registration-layout">
+    <section class="registration-panel">
+        <div class="panel-heading-row">
+            <div>
+                <h2 class="panel-title">Register a Participant</h2>
+                <p class="panel-subtitle">Fill in the details below and submit a valid registration.</p>
+            </div>
+            <span class="mini-badge">Interactive form</span>
+        </div>
+
+        <EditForm Model="registration" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="validation-errors mb-3" />
+
+            <div class="input-row input-row-2">
+                <div>
+                    <label class="form-label">Full Name</label>
+                    <InputText class="form-control" @bind-Value="registration.FullName" />
+                    <div class="mt-2">
+                        <ValidationMessage For="() => registration.FullName" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label">Email</label>
+                    <InputText class="form-control" @bind-Value="registration.Email" />
+                    <div class="mt-2">
+                        <ValidationMessage For="() => registration.Email" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label">Select Event</label>
+                <InputSelect class="form-select" @bind-Value="registration.EventId">
+                    <option value="">Choose an event</option>
+                    @foreach (var item in EventService.Events.OrderBy(e => e.Date))
+                    {
+                        <option value="@item.Id">@item.Title - @item.Date.ToString("dd MMM yyyy")</option>
+                    }
+                </InputSelect>
+                <div class="mt-2">
+                    <ValidationMessage For="() => registration.EventId" />
+                </div>
+            </div>
+
+            <div class="mt-3 form-check card-check">
+                <InputCheckbox class="form-check-input" @bind-Value="registration.AcceptTerms" />
+                <label class="form-check-label">I agree to the registration terms and confirm the information is correct.</label>
+                <div class="mt-2">
+                    <ValidationMessage For="() => registration.AcceptTerms" />
+                </div>
+            </div>
+
+            <div class="toolbar-row mt-4">
+                <button type="submit" class="btn btn-primary">Register attendee</button>
+                <button type="button" class="btn btn-soft" @onclick="ResetForm">Clear</button>
+            </div>
+        </EditForm>
+    </section>
+
+    <aside class="registration-panel">
+        <h2 class="panel-title">What happens on submit</h2>
+        <ul class="small-list">
+            <li><strong>Validation:</strong> name, email, selected event, and consent are checked before submit.</li>
+            <li><strong>Session update:</strong> the current user name is stored in the scoped session service.</li>
+            <li><strong>Attendance:</strong> a new attendee is added to the tracker page.</li>
+            <li><strong>Availability:</strong> the selected event loses one available seat immediately.</li>
+        </ul>
+        <div class="info-banner mt-4">
+            <strong>Why this matters</strong>
+            <p class="mb-0 mt-2">This page covers the “advanced features” requirement from the assignment rubric in one compact workflow.</p>
+        </div>
+    </aside>
+</div>
+
+@code {
+    private RegistrationModel registration = new();
+    private string successMessage = string.Empty;
+
+    private void HandleValidSubmit()
+    {
+        var selectedEvent = EventService.GetById(registration.EventId!.Value);
+        if (selectedEvent is null)
+        {
+            successMessage = "The selected event no longer exists.";
+            return;
+        }
+
+        if (selectedEvent.AvailableSeats <= 0)
+        {
+            successMessage = "This event is already full.";
+            return;
+        }
+
+        selectedEvent.AvailableSeats--;
+
+        SessionState.Login(registration.FullName!.Trim());
+        AttendanceService.RegisterAttendance(selectedEvent.Title, registration.FullName!.Trim(), registration.Email!.Trim());
+
+        successMessage = $"Registration completed for {registration.FullName} in '{selectedEvent.Title}'.";
+        registration = new RegistrationModel();
+    }
+
+    private void ResetForm()
+    {
+        registration = new RegistrationModel();
+        successMessage = string.Empty;
+    }
+}

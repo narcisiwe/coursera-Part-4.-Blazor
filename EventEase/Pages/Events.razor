@@ -1,0 +1,149 @@
+@page "/events"
+@rendermode InteractiveServer
+@inject EventService EventService
+
+<PageTitle>Events - EventEase</PageTitle>
+
+<div class="page-intro">
+    <div>
+        <span class="page-kicker">Foundational Component + CRUD Demo</span>
+        <h1 class="page-title">Upcoming Events</h1>
+        <p class="page-subtitle">Each card below supports live two-way binding. You can also create a new event from the quick form to make the project feel complete, not just editable.</p>
+    </div>
+    <div class="page-chip">@EventService.Events.Count active events</div>
+</div>
+
+<div class="dashboard-grid dashboard-grid-wide">
+    <section class="panel-section compact-panel">
+        <div class="panel-heading-row">
+            <div>
+                <h2 class="panel-title">Add New Event</h2>
+                <p class="panel-subtitle">Use this form to create a new event card.</p>
+            </div>
+            <span class="mini-badge">Feature upgrade</span>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <div class="alert alert-success mb-3">@message</div>
+        }
+
+        <EditForm Model="newEvent" OnValidSubmit="AddEvent">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="validation-errors mb-3" />
+
+            <div class="input-row input-row-2">
+                <div>
+                    <label class="form-label">Title</label>
+                    <InputText class="form-control" @bind-Value="newEvent.Title" />
+                </div>
+                <div>
+                    <label class="form-label">Location</label>
+                    <InputText class="form-control" @bind-Value="newEvent.Location" />
+                </div>
+            </div>
+
+            <div class="input-row input-row-2 mt-3">
+                <div>
+                    <label class="form-label">Date</label>
+                    <InputDate class="form-control" @bind-Value="newEvent.Date" />
+                </div>
+                <div>
+                    <label class="form-label">Available Seats</label>
+                    <InputNumber class="form-control" @bind-Value="newEvent.AvailableSeats" />
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label">Description</label>
+                <InputTextArea class="form-control text-area" @bind-Value="newEvent.Description" />
+            </div>
+
+            <div class="toolbar-row mt-4">
+                <button type="submit" class="btn btn-primary">Add Event</button>
+                <button type="button" class="btn btn-soft" @onclick="ResetForm">Reset</button>
+            </div>
+        </EditForm>
+    </section>
+
+    <section class="panel-section compact-panel stats-panel">
+        <h2 class="panel-title">Quick Overview</h2>
+        <div class="mini-grid">
+            <div class="mini-card">
+                <strong>@EventService.Events.Count</strong>
+                <span>Total cards</span>
+            </div>
+            <div class="mini-card">
+                <strong>@EventService.Events.Sum(e => e.AvailableSeats)</strong>
+                <span>Total seats</span>
+            </div>
+            <div class="mini-card">
+                <strong>@EventService.Events.Min(e => e.Date).ToString("dd MMM")</strong>
+                <span>Nearest date</span>
+            </div>
+            <div class="mini-card">
+                <strong>Live</strong>
+                <span>Bound inputs</span>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="event-grid mt-4">
+    @foreach (var eventItem in EventService.Events.OrderBy(e => e.Date))
+    {
+        <EventCard Event="eventItem" OnDelete="DeleteEvent" />
+    }
+</div>
+
+@code {
+    private EventFormModel newEvent = EventFormModel.CreateDefault();
+    private string message = string.Empty;
+
+    private void AddEvent()
+    {
+        EventService.AddEvent(new EventModel
+        {
+            Title = newEvent.Title!.Trim(),
+            Location = newEvent.Location!.Trim(),
+            Date = newEvent.Date,
+            AvailableSeats = newEvent.AvailableSeats,
+            Description = newEvent.Description!.Trim()
+        });
+
+        message = $"Event '{newEvent.Title}' was added successfully.";
+        newEvent = EventFormModel.CreateDefault();
+    }
+
+    private void ResetForm()
+    {
+        newEvent = EventFormModel.CreateDefault();
+        message = string.Empty;
+    }
+
+    private void DeleteEvent(Guid eventId)
+    {
+        EventService.DeleteEvent(eventId);
+    }
+
+    public class EventFormModel
+    {
+        [Required(ErrorMessage = "Title is required.")]
+        [StringLength(100, MinimumLength = 3, ErrorMessage = "Title must be between 3 and 100 characters.")]
+        public string? Title { get; set; }
+
+        [Required(ErrorMessage = "Location is required.")]
+        public string? Location { get; set; }
+
+        [Required(ErrorMessage = "Description is required.")]
+        [StringLength(300, MinimumLength = 10, ErrorMessage = "Description must be at least 10 characters.")]
+        public string? Description { get; set; }
+
+        public DateTime Date { get; set; } = DateTime.Today.AddDays(14);
+
+        [Range(1, 500, ErrorMessage = "Seats must be between 1 and 500.")]
+        public int AvailableSeats { get; set; } = 40;
+
+        public static EventFormModel CreateDefault() => new();
+    }
+}

@@ -1,0 +1,60 @@
+@page "/session"
+@rendermode InteractiveServer
+@inject SessionStateService SessionState
+
+<PageTitle>Session State - EventEase</PageTitle>
+
+<div class="page-intro">
+    <div>
+        <span class="page-kicker">Advanced Feature</span>
+        <h1 class="page-title">Session State Demo</h1>
+        <p class="page-subtitle">This page shows how a scoped service can hold a temporary user identity and update other UI elements during the current browsing session.</p>
+    </div>
+    <div class="page-chip">Scoped service</div>
+</div>
+
+<div class="session-layout">
+    <section class="session-box">
+        @if (SessionState.IsLoggedIn)
+        {
+            <div class="alert alert-success">
+                Current user: <strong>@SessionState.CurrentUserName</strong>
+            </div>
+            <p class="form-help">The same name appears in the header badge because both areas use the shared session state service.</p>
+            <button class="btn btn-soft mt-2" @onclick="Logout">Log out</button>
+        }
+        else
+        {
+            <div class="alert alert-warning">No active user session.</div>
+
+            <label class="form-label">Enter a temporary name</label>
+            <InputText class="form-control" @bind-Value="userName" />
+            <p class="form-help mt-3">Create a lightweight session to test state updates without authentication.</p>
+            <button class="btn btn-primary mt-2" @onclick="Login">Create session</button>
+        }
+    </section>
+
+    <aside class="registration-panel">
+        <h2 class="panel-title">How it works</h2>
+        <ul class="small-list">
+            <li><strong>SessionStateService</strong> stores the current user name and login flag.</li>
+            <li><strong>StateChanged</strong> notifies the layout whenever the session changes.</li>
+            <li><strong>Shared UI</strong> reflects the active session in the header badge and on this page.</li>
+        </ul>
+    </aside>
+</div>
+
+@code {
+    private string userName = string.Empty;
+
+    private void Login()
+    {
+        if (!string.IsNullOrWhiteSpace(userName))
+        {
+            SessionState.Login(userName.Trim());
+            userName = string.Empty;
+        }
+    }
+
+    private void Logout() => SessionState.Logout();
+}

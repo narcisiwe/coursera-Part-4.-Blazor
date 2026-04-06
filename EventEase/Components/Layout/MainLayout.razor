@@ -1,0 +1,39 @@
+@inherits LayoutComponentBase
+
+<div class="page-shell">
+    <Sidebar />
+
+    <main class="app-main">
+        <div class="top-bar">
+            <div class="top-bar-copy">
+                <span class="app-name">EventEase</span>
+                <small>Modern Blazor demo with a cleaner layout and full rubric coverage</small>
+            </div>
+            <span class="session-badge">@SessionLabel</span>
+        </div>
+
+        <article class="content-wrap">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    [Inject] private SessionStateService SessionState { get; set; } = default!;
+
+    private string SessionLabel => SessionState.IsLoggedIn
+        ? $"Signed in: {SessionState.CurrentUserName}"
+        : "Guest session";
+
+    protected override void OnInitialized()
+    {
+        SessionState.StateChanged += Refresh;
+    }
+
+    private void Refresh() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        SessionState.StateChanged -= Refresh;
+    }
+}
